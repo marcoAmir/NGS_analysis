@@ -1,0 +1,5 @@
+mm10	ftp://ftp.ensembl.org/pub/release-86/gtf/mus_musculus/Mus_musculus.GRCm38.86.gtf.gz
+rn6	ftp://ftp.ensembl.org/pub/release-86/gtf/rattus_norvegicus/Rattus_norvegicus.Rnor_6.0.86.gtf.gz
+hg38	ftp://ftp.ensembl.org/pub/release-86/gtf/homo_sapiens/Homo_sapiens.GRCh38.86.gtf.gz
+bosTau8	ftp://ftp.ensembl.org/pub/release-86/gtf/bos_taurus/Bos_taurus.UMD3.1.86.gtf.gz
+turTru1	ftp://ftp.ensembl.org/pub/release-86/gtf/tursiops_truncatus/Tursiops_truncatus.UMD3.1.86.gtf.gz
