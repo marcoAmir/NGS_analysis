@@ -1,0 +1,69 @@
+# Use lastz to align reads to species other than the species whose reads originated from
+
+# I installed the most recent lastz build (Webb Miller lab @ Penn State U) at:		/cluster/u/amirma/bin/lastz/lastz-distrib-1.04.00/
+
+head -15 dolphin_reads_example.fa | sed -e "s/gnl|SRA|/@/g" > t.fa	# 5 example reads
+head -60 dolphin_reads_example.fa | sed -e "s/gnl|SRA|/@/g" > t2.fa	# 20 example reads (including the 5 from t.fa)
+
+these reads should in theory originate from a region at turTru2 chromosome JH474071 (baited by ncbi blastn)
+
+1) simple example - align a query read (taken from the SRA) to the dolphin genome (=target):
+   (use lastz_32 to align to large (>2GB) target genomes)
+   (use the [multiple] to indicate you have multiple sequences in the target or the query (additional such defintions on the query/target sequences are in the manual under 'Sequence Specifiers'))
+
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple] t.fa --format=sam > t_turTru2.0.sam						# ~48min; only 2/5 reads seems to mapped correctly
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple] t.fa --notransition --format=sam > t_turTru2.1.sam				# ~10min; --notransition lowers seeding sensitivity; result is the same
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple] t.fa --notransition --step=20 --format=sam > t_turTru2.2.sam			# ~1min; --step=20 looks for seeds every 20'th base; results show only 2/5 correct ones
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple] t.fa --notransition --step=20 --noytrim --format=sam > t_turTru2.3.sam	# ~1min; for aligning short reads ‑‑noytrim prevents ends trimmed back to the highest scoring locations during gapped extension; report only the 2/5 correct ones	
+   	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple,unmask] t.fa --notransition --step=20 --noytrim --format=sam > t_turTru2.4.sam	# ~14min; same as latter but without masking repeats
+
+   between trial#4 and trial#3 above, #4 maps more - it seems that masking the repeats reduces a lot of the sensitivity:
+
+2) to check the latter hypothesis - repeat the 'resequencing' alignment with the settings from trial #4, but this time add more reads (20 total)
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple] t2.fa --notransition --step=20 --noytrim --format=sam > t2_turTru2.3.sam		# ~1min
+	lastz_32 /cluster/gbdb-bej/turTru2/turTru2.2bit[multiple,unmask] t2.fa --notransition --step=20 --noytrim --format=sam > t2_turTru2.4.sam	# ~32min
+
+	summary result of lastz for #3 and #4:
+
+	readID			|	no mask		|	masking		|	proportion of the read overlapped by repeat (%)	|	comment(s) 
+				|	#3		|	#4		|	on the JH474071 top blat hit			|
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	SRR606324.83337707.1	|	no map		|	mapped		|	100%						| alignment agrees with bowtie2
+	SRR606324.84803313.1	|	mapped		|	mapped		|	~60%						| alignment agrees with bowtie2	
+	SRR606324.84803313.2	|	no map		|	mapped		|	~90%						| alignment agrees with bowtie2
+	SRR606324.85353092.1	|	no map		|	multiple maps	|	~90%						| bowtie2 align to other chromosome. can filter out this multi lastz mapping
+	SRR606324.84999456.1	|	mapped		|	mapped		|	~60%						| alignment agrees with bowtie2
+	SRR606324.70035581.1	|	no map		|	mapped		|	~80%						| alignment agrees with bowtie2	
+	SRR606324.70281419.1	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.70626482.1	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.72959699.1	|	no map		|	double mapping	|	~80%						| bowtie2 align to JH474071. can filter out this multi lastz mapping
+	SRR606324.72959699.2	|	no map		|	multiple maps	|	100%						| bowtie2 align to JH474071. can filter out this multi lastz mapping
+	SRR606324.73910297.2	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.75550735.1	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.75933381.1	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.77249465.1	|	no map		|	multiple maps	|	100%						| bowtie2 align to JH474071. can filter out this multi lastz mapping
+	SRR606324.77249465.2	|	no map		|	multiple maps	|	~90%						| bowtie2 align to JH474071. can filter out this multi lastz mapping
+	SRR606324.80778797.2	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.81638144.1	|	no map		|	multiple maps	|	100%						| bowtie2 align to other chromosome. can filter out this multi lastz mapping
+	SRR606324.82634914.1	|	mapped		|	mapped		|	none						| alignment agrees with bowtie2
+	SRR606324.83091496.1	|	no map		|	mapped		|	100%						| alignment agrees with bowtie2
+	SRR606324.83091496.2	|	mapped		|	mapped		|	~60%						| alignment agrees with bowtie2
+					
+		Total:			10/20			14/20
+
+   in conclusion, looks like sticking with the parameters of #4 are better - at least for mapping back to the same species
+
+3) try and map to cow:
+	lastz_32 /cluster/gbdb-bej/bosTau8/bosTau8.2bit[multiple,unmask] t2.fa --notransition --step=20 --noytrim --format=sam > t2_bosTau8.4.sam	# ~2min
+	lastz_32 /cluster/gbdb-bej/bosTau8/bosTau8.2bit[multiple,unmask] t2.fa --notransition --noytrim --format=sam > t2_bosTau8.5.sam			# ~31min
+	lastz_32 /cluster/gbdb-bej/bosTau8/bosTau8.2bit[multiple,unmask] t2.fa --notransition --noytrim --scores=turTru2_bosTau8.scores --format=sam > t2_bosTau8.6.sam	# adds Hiram's lastz turTru-bosTau scores
+
+4) now, take SRX200685 reads that bowtie2 maps to turTru2 JH474071_123207_124697:
+	cp ../ids_egr2_lesion.fa .
+   and map them to bosTau8:
+	lastz_32 /cluster/gbdb-bej/bosTau8/bosTau8.2bit[multiple,unmask] ids_egr2_lesion.fa --notransition --noytrim --scores=turTru2_bosTau8.scores --format=sam > ids_egr2_lesion.sam	
+   convert sam->bam:
+	samtools view -bS ids_egr2_lesion.sam > ids_egr2_lesion.bam
+   convert bam->bed:
+	bedtools bamtobed -bed12 -i ids_egr2_lesion.bam > ids_egr2_lesion.bed
+	
