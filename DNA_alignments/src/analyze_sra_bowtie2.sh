@@ -4,6 +4,7 @@
 # currently works only on paired-end illumina libraries
 
 BT2_HOME=/cluster/u/amirma/bin/Bowtie2/bowtie2-2.3.2
+src_dir=/cluster/u/amirma/NGS_analysis/DNA_alignments/src
 
 ####### Settings: ###########################################################################
 torch_sra=0
@@ -22,12 +23,13 @@ local_align=0		# if selected run local alignment
 
 workdir=${PWD}
 
-sra_file=$1				# input name for sra
-indexed_genome=$2			# input target genome, indexed (e.g., /cluster/u/amirma/geneLoss/hg38/validations/sra/cow/PRJEB14827/indexed_genomes/bosTau8)
-library=$3				# gets "single" or "paired"
+sra_file=$1		# input name for sra
+indexed_genome=$2	# input target genome, indexed (e.g., /cluster/u/amirma/geneLoss/hg38/validations/sra/cow/PRJEB14827/indexed_genomes/bosTau8)
+library=$3		# gets "single" or "paired"
 
 if [ "$#" -ne 3 ] && [ "$#" -ne 2 ]; then
-  echo -e "\nAnalysis of a convergent evolution experiment and its controls\n  Usage:\n  $0 sra_file indexed_genome single/paired(OPT)\n\t\tdefault: paired"
+  echo -e "\nAnalysis of a convergent evolution experiment and its controls\n  Usage:\n  $0 
+	sra_file indexed_genome single/paired(OPT)\n\t\tdefault: paired"
   exit 1
 fi
 
@@ -63,14 +65,15 @@ if [ ${ReadLengthTrim} -gt 0 ]; then
 	echo -e "\n\n\n\t...trimming read length to ${ReadLengthTrim} (WARNING: This will permanently modify your Fastqs)...\n"
 	for f in *.fastq.gz
 	do
-		zcat -f ${f} | sed -e "s/length=[0-9]*/length=${ReadLengthTrim}/g" | awk -v L=${ReadLengthTrim} '{if(NR%2==0) {print substr($0,1,L)} else {print $0}}' > tmp; gzip tmp; mv tmp.gz ${f}
+		zcat -f ${f} | sed -e "s/length=[0-9]*/length=${ReadLengthTrim}/g" | awk -v L=${ReadLengthTrim} \
+			'{if(NR%2==0) {print substr($0,1,L)} else {print $0}}' > tmp; gzip tmp; mv tmp.gz ${f}
 	done
 fi
 
 # checking paired-end fastq concordance
 if [ ${library} = "paired" ]; then
 	echo -e "\n\n\n\t...checking paired-end fastq concordance...\n"
-	/cluster/u/amirma/geneLoss/hg38/validations/sra/src/check_pairedEndFastQs.sh ${PWD}/${base}_1.fastq.gz ${PWD}/${base}_2.fastq.gz
+	${src_dir}/check_pairedEndFastQs.sh ${PWD}/${base}_1.fastq.gz ${PWD}/${base}_2.fastq.gz
 fi
 
 # FastQC - quality check for the fastq files:
@@ -106,7 +109,8 @@ echo -e "\n\n\n\t...converting sam to bam...\n"
 samtools view -bS -q ${mapQuality} ${base}_${target}.sam > ${base}_${target}.bam
 echo -e "\n\n\n\t...converting bam to bed(12)...\n"
 bedtools bamtobed -bed12 -i ${base}_${target}.bam > ${base}_${target}.bed
-cat <(echo "track name=${base}_${target}_mapped_reads description=\"${base} reads\" color=160,160,160") <(cat ${base}_${target}.bed) > tmp; mv tmp ${base}_${target}.bed
+cat <(echo "track name=${base}_${target}_mapped_reads description=\"${base} reads\" color=160,160,160") \
+	<(cat ${base}_${target}.bed) > tmp; mv tmp ${base}_${target}.bed
 
 # Clean up
 if [ $torch_sra -ne 0 ];then
